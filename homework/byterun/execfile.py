@@ -6,16 +6,24 @@ import os
 import sys
 import tokenize
 import types
+import builtins
 
 from .pyvm2 import VirtualMachine
 
 
 def open_source(fname):
     """Open a source file the best way."""
-    with open(fname, "rb") as file:
-        encoding, _ = tokenize.detect_encoding(file.readline)
-    return io.open(fname, "r", encoding=encoding)
-
+    try:
+        with tokenize.open(fname) as file:
+            return file
+    except (ImportError, FileNotFoundError, IOError):
+        try:
+            with open(fname, "rb") as file:
+                encoding, _ = tokenize.detect_encoding(file.readline)
+            return io.open(fname, "r", encoding=encoding)
+        except (FileNotFoundError, IOError) as e:
+            print(f"Error opening file {fname}: {e}")
+            raise
 
 NoSource = Exception
 
@@ -23,9 +31,6 @@ NoSource = Exception
 def exec_code_object(code, env):
     vm = VirtualMachine()
     vm.run_code(code, f_globals=env)
-
-
-import builtins
 
 BUILTINS = builtins
 
@@ -39,12 +44,10 @@ def run_python_module(modulename, args):
 
     """
     try:
-        # Find the module spec
         spec = importlib.util.find_spec(modulename)
         if spec is None:
             raise NoSource(f"No module named {modulename!r}")
         if spec.submodule_search_locations is not None:
-            # It's a package, find the __main__ module
             main_name = "__main__"
             spec = importlib.util.find_spec(main_name, package=modulename)
             if spec is None or spec.origin is None:
@@ -61,7 +64,6 @@ def run_python_module(modulename, args):
     except ImportError as err:
         raise NoSource(str(err))
 
-    # Finally, hand the file off to run_python_file for execution.
     args[0] = pathname
     run_python_file(pathname, args, package=packagename)
 
@@ -94,7 +96,6 @@ def run_python_file(filename, args, package=None):
         sys.path[0] = os.path.abspath(os.path.dirname(filename))
 
     try:
-        # Open the source file.
         try:
             source_file = open_source(filename)
         except IOError:
@@ -105,18 +106,13 @@ def run_python_file(filename, args, package=None):
         finally:
             source_file.close()
 
-        # We have the source.  `compile` still needs the last line to be clean,
-        # so make sure it is, then compile a code object from it.
         if not source or source[-1] != "\n":
             source += "\n"
         code = compile(source, filename, "exec")
 
-        # Execute the source file.
         exec_code_object(code, main_mod.__dict__)
     finally:
-        # Restore the old __main__
         sys.modules["__main__"] = old_main_mod
 
-        # Restore the old argv and path
         sys.argv = old_argv
         sys.path[0] = old_path0
