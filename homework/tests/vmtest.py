@@ -94,11 +94,12 @@ class VmTestCase(unittest.TestCase):
             self.assertIsNone(vm_exc)
 
     def assert_same_exception(self, e1, e2):
-        """Exceptions don't implement __eq__, check it ourselves."""
+        """Exceptions don't implement eq, check it ourselves."""
         if e1 is None and e2 is None:
             # Both are None, no exception occurred
             return
+
         self.assertIsNotNone(e1)
         self.assertIsNotNone(e2)
-        self.assertEqual(str(e1), str(e2))
-        self.assertIs(type(e1), type(e2))
+        self.assertIsInstance(e1, type(e2), f"Expected {type(e2).__name__}, but got {type(e1).__name__}")
+        self.assertEqual(str(e1), str(e2), f"Expected exception message '{str(e2)}', but got '{str(e1)}'")

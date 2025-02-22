@@ -38,19 +38,18 @@ def run_python_module(modulename, args):
     element naming the module being executed.
 
     """
-    glo, loc = globals(), locals()
     try:
         # Find the module spec
         spec = importlib.util.find_spec(modulename)
         if spec is None:
-            raise NoSource("No module named %r" % modulename)
+            raise NoSource(f"No module named {modulename!r}")
         if spec.submodule_search_locations is not None:
             # It's a package, find the __main__ module
             main_name = "__main__"
             spec = importlib.util.find_spec(main_name, package=modulename)
             if spec is None or spec.origin is None:
                 raise NoSource(
-                    "No module named %r in package %r" % (main_name, modulename)
+                    f"No module named {main_name!r} in package {modulename!r}"
                 )
             pathname = spec.origin
             packagename = modulename
@@ -58,7 +57,7 @@ def run_python_module(modulename, args):
             packagename = None
             pathname = spec.origin
         if pathname is None:
-            raise NoSource("module does not live in a file: %r" % modulename)
+            raise NoSource(f"module does not live in a file: {modulename!r}")
     except ImportError as err:
         raise NoSource(str(err))
 
@@ -99,7 +98,7 @@ def run_python_file(filename, args, package=None):
         try:
             source_file = open_source(filename)
         except IOError:
-            raise NoSource("No file to run: %r" % filename)
+            raise NoSource(f"No file to run: {filename!r}")
 
         try:
             source = source_file.read()

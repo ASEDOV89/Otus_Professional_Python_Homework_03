@@ -6,11 +6,12 @@ import types
 
 
 def make_cell(value):
+    """Создает объект ячейки замыкания."""
     fn = (lambda x: lambda: x)(value)
     return fn.__closure__[0]
 
 
-class Function(object):
+class Function:
     __slots__ = [
         "func_code",
         "func_name",
@@ -45,7 +46,7 @@ class Function(object):
         self._func = types.FunctionType(code, globs, **kw)
 
     def __repr__(self):
-        return "<Function %s at 0x%08x>" % (self.func_name, id(self))
+        return f"<Function {self.func_name} at 0x{id(self):08x}>"
 
     def __get__(self, instance, owner):
         if instance is not None:
@@ -54,30 +55,36 @@ class Function(object):
             return self
 
     def __call__(self, *args, **kwargs):
-        callargs = inspect.getcallargs(self._func, *args, **kwargs)
+        # Получение аргументов функции
+        sig = inspect.signature(self._func)
+        bound_args = sig.bind(*args, **kwargs)
+        callargs = bound_args.arguments
+
         frame = self._vm.make_frame(self.func_code, callargs, self.func_globals, {})
-        CO_GENERATOR = 32  # flag for "this code uses yield"
+
+        CO_GENERATOR = 32
         if self.func_code.co_flags & CO_GENERATOR:
             gen = Generator(frame, self._vm)
             frame.generator = gen
             retval = gen
         else:
             retval = self._vm.run_frame(frame)
+
         return retval
 
 
-class Method(object):
+class Method:
     def __init__(self, obj, _class, func):
         self.im_self = obj
         self.im_class = _class
         self.im_func = func
 
     def __repr__(self):
-        name = "%s.%s" % (self.im_class.__name__, self.im_func.func_name)
+        name = f"{self.im_class.__name__}.{self.im_func.__name__}"
         if self.im_self is not None:
-            return "<Bound Method %s of %s>" % (name, self.im_self)
+            return f"<Bound Method {name} of {self.im_self}>"
         else:
-            return "<Unbound Method %s>" % (name,)
+            return f"<Unbound Method {name}>"
 
     def __call__(self, *args, **kwargs):
         if self.im_self is not None:
@@ -86,7 +93,7 @@ class Method(object):
             return self.im_func(*args, **kwargs)
 
 
-class Cell(object):
+class Cell:
     def __init__(self, value):
         self.contents = value
 
@@ -97,7 +104,7 @@ class Cell(object):
         self.contents = value
 
 
-Block = collections.namedtuple("Block", "type, handler, level")
+Block = collections.namedtuple("Block", "type handler level")
 
 
 class Frame(object):
@@ -133,18 +140,14 @@ class Frame(object):
 
         if f_code.co_freevars:
             for var in f_code.co_freevars:
-                assert f_back.cells, "f_back.cells: %r" % (f_back.cells,)
+                assert f_back.cells, f"f_back.cells: {f_back.cells}"
                 self.cells[var] = f_back.cells[var]
 
         self.block_stack = []
         self.generator = None
 
     def __repr__(self):
-        return "<Frame at 0x%08x: %r @ %d>" % (
-            id(self),
-            self.f_code.co_filename,
-            self.f_lineno,
-        )
+        return f"<Frame at 0x{id(self):08x}: {self.f_code.co_filename}, line {self.f_lineno}>"
 
     def line_number(self):
         """Get the current line number the frame is executing."""
