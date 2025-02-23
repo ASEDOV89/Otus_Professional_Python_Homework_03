@@ -17,9 +17,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "-v",
-    "--verbose",
-    dest="verbose",
-    action="store_true",
+    "--verbose", dest="verbose", action="store_true",
     help="trace the execution of the bytecode.",
 )
 parser.add_argument(
@@ -27,8 +25,7 @@ parser.add_argument(
     help="The program to run.",
 )
 parser.add_argument(
-    "args",
-    nargs=argparse.REMAINDER,
+    "args", nargs=argparse.REMAINDER,
     help="Arguments to pass to the program.",
 )
 args = parser.parse_args()

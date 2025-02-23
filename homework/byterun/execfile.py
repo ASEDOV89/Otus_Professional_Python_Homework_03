@@ -86,7 +86,6 @@ def run_python_file(filename, args, package=None):
         main_mod.__package__ = package
     main_mod.__builtins__ = BUILTINS
 
-    # Set sys.argv and the first path element properly.
     old_argv = sys.argv.copy()
     old_path0 = sys.path[0]
     sys.argv = args
